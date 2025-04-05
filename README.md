@@ -70,8 +70,8 @@ This application requires FFmpeg for audio conversion. You need to:
    ```
    python main.py
    ```
-6.Running the application will auto fetch album art and meta data.
-  Incase of Album art variations use the alternate album art editor to manually select the album art: 
+6. Running the application will auto fetch album art and meta data.
+   Incase of Album art variations use the alternate album art editor to manually select the album art: 
    ```
    python editAlbumArt.py
    ```
@@ -107,6 +107,11 @@ Use the editAlbumArt.py script to manually check and modify the album art
 1. Click "Upload Image" to select a JPG or PNG file from your computer
 2. Click "Apply Album Art" to use this image as album artwork
 
+### Update Album Names (optional):
+If you would like to Update Album names for songs and other tags available
+1. Run albumUpdater.py script
+2. It will Run through all the files in the downloads folder and assign album names and any other data for all the downloaded songs
+
 ## Customization
 
 You can customize the following settings in the script:
@@ -130,7 +135,7 @@ When encountering issues, check the console output for detailed error messages t
 
 ## License
 
-This project is released under the GNU License. See the LICENSE file for details.
+This project is released under the GLU 3.0 License. See the LICENSE file for details.
 
 ## Credits
 
