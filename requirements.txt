@@ -1,0 +1,7 @@
+# Core dependencies for YouTube song downloader and album art editor
+yt-dlp>=2023.10.13        # For downloading YouTube videos/audio
+requests>=2.28.1          # For making HTTP requests to APIs
+mutagen>=1.45.1           # For reading and writing audio metadata
+
+# For the album art editor GUI
+pillow>=9.2.0             # For image processing (PIL fork)
