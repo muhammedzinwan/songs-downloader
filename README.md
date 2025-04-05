@@ -137,8 +137,20 @@ When encountering issues, check the console output for detailed error messages t
 
 This project is released under the GLU 3.0 License. See the LICENSE file for details.
 
+## Disclaimer
+
+This software is provided for educational and research purposes only. The author does not endorse or promote any form of copyright infringement, piracy, or illegal use of this code.
+
+Users of this code are solely responsible for ensuring their use complies with all applicable local, state, national, and international laws and regulations. Any use of this software for downloading or processing copyrighted content should only be done with proper authorization from the content owner or within the bounds of fair use/fair dealing provisions in your jurisdiction.
+
+This project was created as a technical exercise to understand web technologies, automation, and media processing. By using this code, you agree to use it responsibly and ethically.
+
+The author assumes no liability for any misuse of this software or any damages arising from its use.
+
 ## Credits
 
 - Uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) for YouTube downloading
 - Uses [Mutagen](https://github.com/quodlibet/mutagen) for audio metadata handling
 - Album artwork retrieved from iTunes and Deezer APIs
+
+
