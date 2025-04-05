@@ -10,7 +10,7 @@ from PIL import Image, ImageTk
 from io import BytesIO
 
 # Constants
-FFMPEG_DIRECTORY = r"D:\Project\SongDownloadPy\ffmpeg\ffmpeg-2025-02-20-git-bc1a3bfd2c-full_build\bin"
+FFMPEG_DIRECTORY = r"ffmpeg\ffmpeg-2025-02-20-git-bc1a3bfd2c-full_build\bin"
 DEFAULT_IMG_SIZE = (300, 300)
 
 class AlbumArtEditor:

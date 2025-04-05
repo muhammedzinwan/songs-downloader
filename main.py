@@ -8,7 +8,7 @@ import subprocess
 
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-FFMPEG_DIRECTORY = r"D:\Project\SongDownloadPy\ffmpeg\ffmpeg-2025-02-20-git-bc1a3bfd2c-full_build\bin"
+FFMPEG_DIRECTORY = r"ffmpeg\ffmpeg-2025-02-20-git-bc1a3bfd2c-full_build\bin"
 
 def get_video_info(url):
     """Get video title and other info before downloading"""
