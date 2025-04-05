@@ -352,15 +352,15 @@ class AlbumArtEditor:
             # Create a backup of the original file
             base_dir = os.path.dirname(self.current_file)
             base_name = os.path.basename(self.current_file)
-            backup_file = os.path.join(base_dir, f"backup_{base_name}")
+            #backup_file = os.path.join(base_dir, f"backup_{base_name}")
             
             # Copy file as backup
-            try:
-                with open(self.current_file, 'rb') as src, open(backup_file, 'wb') as dst:
-                    dst.write(src.read())
-                print(f"Backup created: {backup_file}")
-            except Exception as e:
-                print(f"Warning: Could not create backup: {e}")
+            #try:
+               # with open(self.current_file, 'rb') as src, open(backup_file, 'wb') as dst:
+              #      dst.write(src.read())
+             #   print(f"Backup created: {backup_file}")
+           # except Exception as e:
+          #      print(f"Warning: Could not create backup: {e}")
             
             # Open the MP4 file
             audio = MP4(self.current_file)

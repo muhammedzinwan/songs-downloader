@@ -164,9 +164,13 @@ def extract_artist_title(video_title):
     
     return None, video_title.strip()
 
-def get_album_art_deezer(query):
+def get_album_art_deezer(query, artist=None):
     """Search album art on Deezer"""
+    # If artist is provided, use a more specific query
     search_url = f"https://api.deezer.com/search?q={query}"
+    if artist:
+        search_url = f"https://api.deezer.com/search?q=artist:\"{artist}\" track:\"{query}\""
+    
     try:
         response = requests.get(search_url).json()
         if "data" in response and response["data"]:
@@ -181,9 +185,16 @@ def get_album_art_deezer(query):
         print(f"Deezer search error: {e}")
     return None
 
-def get_album_art_itunes(query):
+def get_album_art_itunes(query, artist=None):
     """Search album art on iTunes"""
-    search_url = f"https://itunes.apple.com/search?term={query}&media=music&limit=1"
+    if artist:
+        # Combine artist and query with a space or + for better search results
+        combined_query = f"{artist} {query}"
+        # URL encode the combined query
+        search_url = f"https://itunes.apple.com/search?term={combined_query}&media=music&limit=1"
+    else:
+        search_url = f"https://itunes.apple.com/search?term={query}&media=music&limit=1"
+    
     try:
         response = requests.get(search_url).json()
         if response["results"]:
@@ -198,7 +209,7 @@ def get_album_art_itunes(query):
         print(f"iTunes search error: {e}")
     return None
 
-def get_album_art_and_artist(video_title):
+def get_album_art_and_artist(video_title, video_info=None):
     """Try multiple sources and methods to find album art and artist info"""
     print("Searching for album art and artist info...")
     
@@ -206,12 +217,26 @@ def get_album_art_and_artist(video_title):
     cleaned_title = clean_title_for_search(video_title)
     extracted_artist, title = extract_artist_title(cleaned_title)
     
+    # Use artist from video_info if available
+    info_artist = None
+    if video_info and video_info.get('artist'):
+        info_artist = video_info.get('artist')
+        print(f"Using artist from video metadata: {info_artist}")
+    
+    # Determine the best artist to use (prefer info_artist over extracted_artist)
+    best_artist = info_artist if info_artist else extracted_artist
+    
     # Try different search combinations
     search_queries = []
-    if extracted_artist and title:
-        search_queries.append(f"{extracted_artist} {title}")
+    if best_artist and title:
+        # Priority 1: Artist + Title (most specific)
+        search_queries.append(f"{best_artist} {title}")
+        # Priority 2: Just the artist + cleaned title
+        search_queries.append(f"{best_artist} {cleaned_title}")
+        # Priority 3: Just the title
         search_queries.append(title)
     else:
+        # Fallback to just the cleaned title
         search_queries.append(cleaned_title)
     
     # Try each query with each service
@@ -219,13 +244,13 @@ def get_album_art_and_artist(video_title):
         print(f"Trying search query: {query}")
         
         # Try Deezer
-        result = get_album_art_deezer(query)
+        result = get_album_art_deezer(query, best_artist)
         if result:
             print("Found info on Deezer")
             return result
             
         # Try iTunes
-        result = get_album_art_itunes(query)
+        result = get_album_art_itunes(query, best_artist)
         if result:
             print("Found info on iTunes")
             return result
@@ -335,8 +360,8 @@ def process_song(song_url):
     cleaned_title = clean_title_for_search(video_info['title'])
     print(f"Processing metadata for: {cleaned_title}")
     
-    # Get album art and artist info
-    metadata_info = get_album_art_and_artist(video_info['title'])
+    # Get album art and artist info - pass both title and video_info
+    metadata_info = get_album_art_and_artist(video_info['title'], video_info)
     
     # Extract artist and art URL from result
     artist = metadata_info.get('artist', None)
