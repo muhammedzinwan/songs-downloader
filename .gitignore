@@ -1,3 +1,4 @@
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -8,6 +9,15 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+
+# Create a .gitignore file
+echo "# Python-specific ignores
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
 build/
 develop-eggs/
 dist/
@@ -172,3 +182,15 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Project-specific ignores
+downloads/
+ffmpeg/
+.env
+.venv
+venv/
+ENV/
+

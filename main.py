@@ -4,6 +4,7 @@ import requests
 from mutagen.mp4 import MP4, MP4Cover
 from urllib.parse import unquote
 import time
+import subprocess
 
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
@@ -33,23 +34,14 @@ def download_song(url):
     # Get a list of files before download to compare later
     files_before = set(os.listdir(DOWNLOAD_DIR))
     
+    # Instead of using postprocessors, we'll download the audio directly
+    # and then manually convert it with ffmpeg for more control
     ydl_opts = {
-        'format': 'bestaudio',
+        'format': 'bestaudio[ext=m4a]/bestaudio',  # Try to get m4a directly first
         'outtmpl': f'{DOWNLOAD_DIR}/%(title)s.%(ext)s',
         'ffmpeg_location': FFMPEG_DIRECTORY,
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'aac',
-            'preferredquality': '256',  # High quality AAC
-        }],
-        'prefer_ffmpeg': True,
         'keepvideo': False,
-        'postprocessor_args': [
-            '-acodec', 'aac',
-            '-vn',
-            '-movflags', '+faststart',  # Optimizes for streaming/quick start
-            '-profile:a', 'aac_low',    # Ensures maximum compatibility
-        ],
+        'quiet': False,  # Show download progress
     }
     
     try:
@@ -57,37 +49,73 @@ def download_song(url):
             info = ydl.extract_info(url, download=True)
             title = info.get('title', '')
             
-            # Wait a moment for file operations to complete
+            # Wait for file operations to complete
             time.sleep(1)
             
             # Find the new file by comparing directory contents
             files_after = set(os.listdir(DOWNLOAD_DIR))
             new_files = files_after - files_before
             
-            # Look for .m4a files among the new files
+            if not new_files:
+                print("No new files found after download")
+                return None, None
+            
+            # Get the downloaded file (likely not an .m4a yet)
+            downloaded_file = None
             for file in new_files:
-                if file.endswith('.m4a'):
-                    return title, file
+                downloaded_file = file
+                break
             
-            # If no .m4a file found but new files exist, take the first new file
-            if new_files:
-                for file in new_files:
-                    return title, file
+            if not downloaded_file:
+                print("Could not find downloaded file")
+                return None, None
             
-            # Fallback: try to guess the filename based on title
-            possible_filename = f"{title}.m4a"
-            if os.path.exists(os.path.join(DOWNLOAD_DIR, possible_filename)):
-                return title, possible_filename
+            # Source file path
+            source_path = os.path.join(DOWNLOAD_DIR, downloaded_file)
             
-            # Ultimate fallback: search for any recent .m4a file
-            for file in sorted(files_after, key=lambda f: os.path.getmtime(os.path.join(DOWNLOAD_DIR, f)), reverse=True):
-                if file.endswith('.m4a'):
-                    return title, file
-                    
-            print("Warning: Could not determine the exact downloaded file. Metadata may not be applied correctly.")
-            return title, None
+            # Prepare output file name - ensure it ends with .m4a
+            base_name = os.path.splitext(downloaded_file)[0]
+            output_file = f"{base_name}.m4a"
+            output_path = os.path.join(DOWNLOAD_DIR, output_file)
+            
+            print(f"Converting {source_path} to {output_path}...")
+            
+            # Use ffmpeg directly for a more controlled conversion
+            ffmpeg_path = os.path.join(FFMPEG_DIRECTORY, "ffmpeg.exe")
+            ffmpeg_cmd = [
+                ffmpeg_path,
+                "-i", source_path,
+                "-c:a", "aac", 
+                "-b:a", "256k",
+                "-movflags", "+faststart",
+                "-f", "mp4",
+                "-y",  # Overwrite if exists
+                output_path
+            ]
+            
+            # Run ffmpeg command
+            process = subprocess.run(ffmpeg_cmd, check=True, 
+                                    stdout=subprocess.PIPE, 
+                                    stderr=subprocess.PIPE)
+            
+            # If source and output file are different, remove the source file
+            if source_path != output_path and os.path.exists(output_path):
+                try:
+                    os.remove(source_path)
+                    print(f"Removed original file: {source_path}")
+                except:
+                    print(f"Could not remove original file: {source_path}")
+            
+            # Verify the new file exists
+            if os.path.exists(output_path):
+                print(f"Successfully converted to: {output_file}")
+                return title, output_file
+            else:
+                print(f"Conversion failed - output file not found: {output_path}")
+                return title, downloaded_file
+    
     except Exception as e:
-        print(f"Error downloading: {e}")
+        print(f"Error during download/conversion: {e}")
         return None, None
 
 def clean_title_for_search(title):
@@ -213,7 +241,55 @@ def get_album_art_and_artist(video_title):
 def embed_metadata(song_path, title, artist=None, image_url=None):
     """Embed metadata and album art into the M4A file"""
     try:
-        audio = MP4(song_path)
+        # Verify the file exists
+        if not os.path.exists(song_path):
+            print(f"File not found: {song_path}")
+            return False
+        
+        # Verify the file is actually an MP4 file before trying to open it
+        try:
+            # Check file size first - avoid empty files
+            file_size = os.path.getsize(song_path)
+            if file_size < 1024:  # Less than 1KB
+                print(f"File too small to be valid: {song_path} ({file_size} bytes)")
+                return False
+                
+            audio = MP4(song_path)
+        except Exception as e:
+            print(f"Cannot open as MP4: {e}")
+            
+            # Try to fix the file with ffmpeg
+            print("Attempting to fix the file format...")
+            ffmpeg_path = os.path.join(FFMPEG_DIRECTORY, "ffmpeg.exe")
+            temp_path = song_path + ".temp.m4a"
+            
+            ffmpeg_cmd = [
+                ffmpeg_path,
+                "-i", song_path,
+                "-c:a", "copy",  # Just copy the audio stream, no re-encoding
+                "-f", "mp4",     # Ensure mp4 container format
+                "-y",            # Overwrite if exists
+                temp_path
+            ]
+            
+            try:
+                subprocess.run(ffmpeg_cmd, check=True, 
+                              stdout=subprocess.PIPE, 
+                              stderr=subprocess.PIPE)
+                
+                # Remove original file and rename temp file
+                if os.path.exists(temp_path):
+                    os.remove(song_path)
+                    os.rename(temp_path, song_path)
+                    print("File fixed successfully")
+                    # Now try opening it again
+                    audio = MP4(song_path)
+                else:
+                    print("Failed to fix file format")
+                    return False
+            except Exception as fix_e:
+                print(f"Error fixing file: {fix_e}")
+                return False
         
         # Add title metadata
         audio['\xa9nam'] = [title]  # Title
@@ -236,8 +312,10 @@ def embed_metadata(song_path, title, artist=None, image_url=None):
         
         audio.save()
         print(f"Metadata embedded for: {title}")
+        return True
     except Exception as e:
         print(f"Error embedding metadata: {e}")
+        return False
 
 def process_song(song_url):
     """Process a single song - download and add metadata"""
@@ -249,13 +327,8 @@ def process_song(song_url):
     
     # Download the song
     downloaded_title, downloaded_filename = download_song(song_url)
-    if not downloaded_title:
+    if not downloaded_title or not downloaded_filename:
         print("Failed to download song")
-        return False
-    
-    # If we couldn't determine the filename
-    if not downloaded_filename:
-        print("Could not determine the downloaded file, skipping metadata embedding")
         return False
     
     # Clean the title for better search results
@@ -269,15 +342,19 @@ def process_song(song_url):
     artist = metadata_info.get('artist', None)
     album_art_url = metadata_info.get('art_url', None)
     
-    # Embed metadata and album art ONLY to the newly downloaded file
+    # Embed metadata and album art
     song_path = os.path.join(DOWNLOAD_DIR, downloaded_filename)
     if os.path.exists(song_path):
-        embed_metadata(song_path, cleaned_title, artist, album_art_url)
-        result_info = f"{cleaned_title}"
-        if artist:
-            result_info += f" by {artist}"
-        print(f"Successfully processed: {result_info}")
-        return True
+        success = embed_metadata(song_path, cleaned_title, artist, album_art_url)
+        if success:
+            result_info = f"{cleaned_title}"
+            if artist:
+                result_info += f" by {artist}"
+            print(f"Successfully processed: {result_info}")
+            return True
+        else:
+            print(f"Failed to embed metadata for {cleaned_title}")
+            return False
     else:
         print(f"Error: Could not find the downloaded file at {song_path}")
         return False
